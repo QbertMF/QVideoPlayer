@@ -19,7 +19,9 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "permissions": [],
+      "package": "de.qbert.QVideoPlayer"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -28,6 +30,11 @@
       "expo-video",
       "react-native-video",
       "expo-web-browser"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "7127cf10-ffa1-4cef-aa04-475353714454"
+      }
+    }
   }
 }
