@@ -18,6 +18,9 @@ export default function App() {
   const [modalPosition, setModalPosition] = useState({ x: 0, y: 0 });
   const [selectedVideoIndex, setSelectedVideoIndex] = useState(null);
   const [useBrowser, setUseBrowser] = useState(true);
+  const [ratingModalVisible, setRatingModalVisible] = useState(false);
+  const [ratingToEdit, setRatingToEdit] = useState(null);
+  const [newRating, setNewRating] = useState('');
 
   // Constant encryption key (same across app sessions)
   const ENCRYPTION_KEY = 42857; // Fixed random number for encryption
@@ -259,6 +262,34 @@ export default function App() {
       }
     };
 
+    const handleUpdateRating = (videoIndex) => {
+      setRatingToEdit(videoIndex);
+      setNewRating(videos[videoIndex].rating.toString());
+      setRatingModalVisible(true);
+    };
+
+    const submitRatingUpdate = () => {
+      const numRating = parseInt(newRating);
+      if (isNaN(numRating) || numRating < 0 || numRating > 5) {
+        Alert.alert('Error', 'Please enter a valid rating between 0 and 5');
+        return;
+      }
+      
+      const updatedVideos = [...videos];
+      updatedVideos[ratingToEdit].rating = numRating;
+      setVideos(updatedVideos);
+      setRatingModalVisible(false);
+      setRatingToEdit(null);
+      setNewRating('');
+      Alert.alert('Success', `Rating updated to ${numRating} star${numRating !== 1 ? 's' : ''}`);
+    };
+
+    const cancelRatingUpdate = () => {
+      setRatingModalVisible(false);
+      setRatingToEdit(null);
+      setNewRating('');
+    };
+
   return (
     <SafeAreaView style={styles.container}>
       {!isLoggedIn ? (
@@ -315,7 +346,9 @@ export default function App() {
               </Text>
               <View style={styles.videoMetaContainer}>
                 <Text style={styles.videoDateText}>Added: {item.dateAdded}</Text>
-                <Text style={styles.videoRatingText}>Rating: {'★'.repeat(item.rating)}{'☆'.repeat(5-item.rating)}</Text>
+                <TouchableOpacity onPress={() => handleUpdateRating(index)}>
+                  <Text style={styles.videoRatingText}>Rating: {'★'.repeat(item.rating)}{'☆'.repeat(5-item.rating)}</Text>
+                </TouchableOpacity>
                 {item.labels.length > 0 && (
                   <View style={styles.labelsContainer}>
                     {item.labels.map((label, labelIndex) => (
@@ -374,13 +407,71 @@ export default function App() {
               <Text style={styles.modalText}>Cancel</Text>
             </TouchableOpacity>
           </View>
+        </View>
+      </Modal>
+
+      {/* Rating Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={ratingModalVisible}
+        onRequestClose={cancelRatingUpdate}
+      >
+        <View style={styles.ratingModalOverlay}>
+          <View style={styles.ratingModalContent}>
+            <Text style={styles.ratingModalTitle}>Update Rating</Text>
+            <Text style={styles.ratingModalSubtitle}>Enter a rating between 0 and 5:</Text>
+            
+            <View style={styles.ratingInputContainer}>
+              <TouchableOpacity 
+                style={styles.ratingButton} 
+                onPress={() => {
+                  const current = parseInt(newRating) || 0;
+                  if (current > 0) setNewRating((current - 1).toString());
+                }}
+              >
+                <Text style={styles.ratingButtonText}>−</Text>
+              </TouchableOpacity>
+              
+              <TextInput
+                style={styles.ratingInput}
+                value={newRating}
+                onChangeText={setNewRating}
+                placeholder="0-5"
+                keyboardType="numeric"
+                maxLength={1}
+                autoFocus={true}
+              />
+              
+              <TouchableOpacity 
+                style={styles.ratingButton} 
+                onPress={() => {
+                  const current = parseInt(newRating) || 0;
+                  if (current < 5) setNewRating((current + 1).toString());
+                }}
+              >
+                <Text style={styles.ratingButtonText}>+</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.ratingModalButtons}>
+              <TouchableOpacity style={styles.ratingCancelBtn} onPress={cancelRatingUpdate}>
+                <Text style={styles.ratingCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.ratingUpdateBtn} onPress={submitRatingUpdate}>
+                <Text style={styles.ratingUpdateText}>Update</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </Modal>
+        </View>
+      </Modal>
         </>
       )}
     </SafeAreaView>
   );
-}const styles = StyleSheet.create({
+}
+
+const styles = StyleSheet.create({
   container: {
     marginTop: 40,
     padding: 20,
@@ -526,5 +617,90 @@ export default function App() {
     borderRadius: 10,
     alignItems: 'center',
     paddingHorizontal: 5,
+  },
+  ratingModalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  ratingModalContent: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    padding: 20,
+    width: '80%',
+    maxWidth: 300,
+    alignItems: 'center',
+  },
+  ratingModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#333',
+  },
+  ratingModalSubtitle: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  ratingInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  ratingButton: {
+    backgroundColor: '#007AFF',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 10,
+  },
+  ratingButtonText: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  ratingInput: {
+    borderWidth: 2,
+    borderColor: '#007AFF',
+    borderRadius: 10,
+    padding: 15,
+    fontSize: 18,
+    textAlign: 'center',
+    width: 60,
+  },
+  ratingModalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  ratingCancelBtn: {
+    backgroundColor: '#f0f0f0',
+    padding: 12,
+    borderRadius: 8,
+    flex: 1,
+    marginRight: 10,
+    alignItems: 'center',
+  },
+  ratingUpdateBtn: {
+    backgroundColor: '#007AFF',
+    padding: 12,
+    borderRadius: 8,
+    flex: 1,
+    marginLeft: 10,
+    alignItems: 'center',
+  },
+  ratingCancelText: {
+    color: '#333',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  ratingUpdateText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
