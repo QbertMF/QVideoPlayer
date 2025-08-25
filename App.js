@@ -105,7 +105,7 @@ export default function App() {
 
   // Get screen dimensions
   const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-  const modalWidth = 120;
+  const modalWidth = 150;
   const modalHeight = 120; // Approximate height of modal content
 
   // Helper function to calculate safe modal position
@@ -242,6 +242,23 @@ export default function App() {
       }
     };
 
+    const handleExportVideos = async () => {
+      try {
+        if (videos.length === 0) {
+          Alert.alert('Info', 'No videos to export');
+          return;
+        }
+        
+        // Extract URLs and join with space and line feed
+        const urlList = videos.map(video => video.url).join(' \n');
+        
+        await Clipboard.setStringAsync(urlList);
+        Alert.alert('Success', `${videos.length} video URLs copied to clipboard`);
+      } catch (error) {
+        Alert.alert('Error', 'Could not copy URLs to clipboard');
+      }
+    };
+
   return (
     <SafeAreaView style={styles.container}>
       {!isLoggedIn ? (
@@ -270,6 +287,15 @@ export default function App() {
             >
               <Text style={[styles.toggleBtnText, useBrowser && styles.toggleBtnTextActive]}>
                 {useBrowser ? '🌐 External Browser' : '📺 Video Player Mode'}
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.exportBtn} 
+              onPress={handleExportVideos}
+            >
+              <Text style={styles.exportBtnText}>
+                📋 Export URLs ({videos.length})
               </Text>
             </TouchableOpacity>
           </View>
@@ -406,6 +432,20 @@ export default function App() {
   toggleBtnTextActive: {
     color: 'white',
   },
+  exportBtn: {
+    backgroundColor: '#28a745',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#28a745',
+    marginTop: 5,
+  },
+  exportBtnText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
+  },
   videoPlayer: {
     height: 200,
     width: '100%',
@@ -470,7 +510,7 @@ export default function App() {
   },
   modalContainer: {
     position: 'absolute',
-    width: 120,
+    width: 180,
     zIndex: 1000,
   },
   modalItem: {
@@ -485,5 +525,6 @@ export default function App() {
     borderWidth: 2,
     borderRadius: 10,
     alignItems: 'center',
+    paddingHorizontal: 5,
   },
 });
