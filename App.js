@@ -1,14 +1,14 @@
-import { Text, SafeAreaView, StyleSheet, Button, View , TouchableOpacity, TextInput, Modal, FlatList, Alert, Dimensions, Linking} from 'react-native';
+import { Text, SafeAreaView, StyleSheet, Button, View , TouchableOpacity, TextInput, Modal, FlatList, Alert, Dimensions, Linking, Keyboard} from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as WebBrowser from 'expo-web-browser';
 import React, { useState, useRef } from 'react';
 import { useEvent } from 'expo';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import PasswordScreen from './components/pwScreen';
 
 export default function App() {
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [password, setPassword] = useState('');
   const [videos, setVideos] = useState([]);
   //const [currentVideo, setCurrentVideo] = useState("http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4");
   const [currentVideo, setCurrentVideo] = useState(null);
@@ -60,16 +60,6 @@ export default function App() {
 
     const { isPlaying } = useEvent(player, 'playingChange', { isPlaying: player.playing });
 
-    const handleLogin = () => {
-      if (password === 'qv') {
-        setIsLoggedIn(true);
-        setPassword(''); // Clear password field
-      } else {
-        Alert.alert('Error', 'Incorrect password');
-        setPassword(''); // Clear password field on error
-      }
-    };
-  
     const handleAddVideo = () => {
       if (newVideoURL.trim()) {
         // Split the input by spaces and filter for URLs starting with http
@@ -88,6 +78,9 @@ export default function App() {
           setNewVideoURL('');
           setNewVideoRating(0);
           setNewVideoLabels('');
+          
+          // Dismiss the keyboard after adding videos
+          Keyboard.dismiss();
           
           // Show confirmation message
           if (foundUrls.length > 1) {
@@ -154,25 +147,8 @@ export default function App() {
   return (
     <SafeAreaView style={styles.container}>
       {!isLoggedIn ? (
-        // Login Screen
-        <View style={styles.loginContainer}>
-          <Text style={styles.loginTitle}>QVideoPlayer</Text>
-          <Text style={styles.loginSubtitle}>Enter password to continue</Text>
-          
-          <TextInput
-            style={styles.passwordInput}
-            placeholder="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry={true}
-            autoFocus={true}
-            onSubmitEditing={handleLogin}
-          />
-          
-          <TouchableOpacity style={styles.loginBtn} onPress={handleLogin}>
-            <Text style={styles.loginBtnText}>Login</Text>
-          </TouchableOpacity>
-        </View>
+        // Login Screen Component
+        <PasswordScreen onLogin={() => setIsLoggedIn(true)} />
       ) : (
         // Main App
         <>
@@ -299,46 +275,6 @@ export default function App() {
     padding: 20,
     backgroundColor: '#fff',
     flex: 1,
-  },
-  loginContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  loginTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#007AFF',
-    marginBottom: 10,
-  },
-  loginSubtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 40,
-    textAlign: 'center',
-  },
-  passwordInput: {
-    borderWidth: 2,
-    borderColor: '#007AFF',
-    padding: 15,
-    borderRadius: 10,
-    fontSize: 16,
-    width: '100%',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  loginBtn: {
-    backgroundColor: '#007AFF',
-    padding: 15,
-    borderRadius: 10,
-    width: '100%',
-    alignItems: 'center',
-  },
-  loginBtnText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
   },
   addURL: {
     marginBottom: 15,
