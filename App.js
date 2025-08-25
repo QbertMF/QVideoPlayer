@@ -7,7 +7,7 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 
 export default function App() {
 
-  const [isLoggedIn, setIsLoggedIn] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [password, setPassword] = useState('');
   const [videos, setVideos] = useState([]);
   //const [currentVideo, setCurrentVideo] = useState("http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4");
@@ -63,8 +63,10 @@ export default function App() {
     const handleLogin = () => {
       if (password === 'qv') {
         setIsLoggedIn(true);
+        setPassword(''); // Clear password field
       } else {
         Alert.alert('Error', 'Incorrect password');
+        setPassword(''); // Clear password field on error
       }
     };
   
@@ -151,49 +153,71 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {!isLoggedIn ? (
+        // Login Screen
+        <View style={styles.loginContainer}>
+          <Text style={styles.loginTitle}>QVideoPlayer</Text>
+          <Text style={styles.loginSubtitle}>Enter password to continue</Text>
+          
+          <TextInput
+            style={styles.passwordInput}
+            placeholder="Password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={true}
+            autoFocus={true}
+            onSubmitEditing={handleLogin}
+          />
+          
+          <TouchableOpacity style={styles.loginBtn} onPress={handleLogin}>
+            <Text style={styles.loginBtnText}>Login</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        // Main App
+        <>
+          <View style={styles.addURL}>
+            <TextInput
+              style={styles.addURLTxt}
+              placeholder="Enter Video URL"
+              value={newVideoURL}
+              onChangeText={setNewVideoURL}
+            />
+            <TextInput
+              style={styles.addRatingTxt}
+              placeholder="Rating (0-5)"
+              value={newVideoRating.toString()}
+              onChangeText={(text) => {
+                const rating = parseInt(text) || 0;
+                setNewVideoRating(Math.min(Math.max(rating, 0), 5));
+              }}
+              keyboardType="numeric"
+            />
+            <TextInput
+              style={styles.addLabelsTxt}
+              placeholder="Labels (comma separated)"
+              value={newVideoLabels}
+              onChangeText={setNewVideoLabels}
+            />
+            <TouchableOpacity style={styles.addURLBtn} onPress={handleAddVideo}>
+              <Text style={styles.addBtnText}>Add Video</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.toggleBtn, useBrowser && styles.toggleBtnActive]} 
+              onPress={() => setUseBrowser(!useBrowser)}
+            >
+              <Text style={[styles.toggleBtnText, useBrowser && styles.toggleBtnTextActive]}>
+                {useBrowser ? '🌐 External Browser' : '📺 Video Player Mode'}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-    <View style={styles.addURL}>
-      <TextInput
-        style={styles.addURLTxt}
-        placeholder="Enter Video URL"
-        value={newVideoURL}
-        onChangeText={setNewVideoURL}
-      />
-      <TextInput
-        style={styles.addRatingTxt}
-        placeholder="Rating (0-5)"
-        value={newVideoRating.toString()}
-        onChangeText={(text) => {
-          const rating = parseInt(text) || 0;
-          setNewVideoRating(Math.min(Math.max(rating, 0), 5));
-        }}
-        keyboardType="numeric"
-      />
-      <TextInput
-        style={styles.addLabelsTxt}
-        placeholder="Labels (comma separated)"
-        value={newVideoLabels}
-        onChangeText={setNewVideoLabels}
-      />
-      <TouchableOpacity style={styles.addURLBtn} onPress={handleAddVideo}>
-        <Text style={styles.addBtnText}>Add Video</Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity 
-        style={[styles.toggleBtn, useBrowser && styles.toggleBtnActive]} 
-        onPress={() => setUseBrowser(!useBrowser)}
-      >
-        <Text style={[styles.toggleBtnText, useBrowser && styles.toggleBtnTextActive]}>
-          {useBrowser ? '🌐 External Browser' : '📺 Video Player Mode'}
-        </Text>
-      </TouchableOpacity>
-    </View>
-
-    {!useBrowser && (
-      <VideoView style={styles.videoPlayer} player={player} allowsFullscreen allowsPictureInPicture />
-    )}
-      
-    <View style={styles.listContainer}>
+          {!useBrowser && (
+            <VideoView style={styles.videoPlayer} player={player} allowsFullscreen allowsPictureInPicture />
+          )}
+            
+          <View style={styles.listContainer}>
       <FlatList
         data={videos}
         renderItem={({ item, index }) => (
@@ -263,20 +287,58 @@ export default function App() {
               <Text style={styles.modalText}>Cancel</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </Modal>
-
-
+          </View>
+        </Modal>
+        </>
+      )}
     </SafeAreaView>
   );
-}
-
-const styles = StyleSheet.create({
+}const styles = StyleSheet.create({
   container: {
     marginTop: 40,
     padding: 20,
     backgroundColor: '#fff',
     flex: 1,
+  },
+  loginContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  loginTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#007AFF',
+    marginBottom: 10,
+  },
+  loginSubtitle: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 40,
+    textAlign: 'center',
+  },
+  passwordInput: {
+    borderWidth: 2,
+    borderColor: '#007AFF',
+    padding: 15,
+    borderRadius: 10,
+    fontSize: 16,
+    width: '100%',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  loginBtn: {
+    backgroundColor: '#007AFF',
+    padding: 15,
+    borderRadius: 10,
+    width: '100%',
+    alignItems: 'center',
+  },
+  loginBtnText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   addURL: {
     marginBottom: 15,
