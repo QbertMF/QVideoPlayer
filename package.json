@@ -15,7 +15,8 @@
     "react": "19.0.0",
     "react-native": "0.79.5",
     "react-native-video": "^6.10.2",
-    "expo-clipboard": "~7.1.5"
+    "expo-clipboard": "~7.1.5",
+    "expo-web-browser": "~14.2.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"

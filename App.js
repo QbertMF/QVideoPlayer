@@ -1,5 +1,6 @@
-import { Text, SafeAreaView, StyleSheet, Button, View , TouchableOpacity, TextInput, Modal, FlatList, Alert, Dimensions} from 'react-native';
+import { Text, SafeAreaView, StyleSheet, Button, View , TouchableOpacity, TextInput, Modal, FlatList, Alert, Dimensions, Linking} from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import * as WebBrowser from 'expo-web-browser';
 import React, { useState, useRef } from 'react';
 import { useEvent } from 'expo';
 import { useVideoPlayer, VideoView } from 'expo-video';
@@ -17,6 +18,7 @@ export default function App() {
   const [modalVisible, setModalVisible] = useState(false);
   const [modalPosition, setModalPosition] = useState({ x: 0, y: 0 });
   const [selectedVideoIndex, setSelectedVideoIndex] = useState(null);
+  const [useBrowser, setUseBrowser] = useState(true);
 
   // Get screen dimensions
   const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -111,6 +113,42 @@ export default function App() {
       Alert.alert('Copied', 'URL copied to clipboard');
     };
 
+    const handleOpenInBrowser = async (url) => {
+      try {
+        // Debug: Log the URL being opened
+        console.log('Opening URL:', url);
+        
+        // Ensure URL has proper protocol
+        let formattedUrl = url;
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+          formattedUrl = 'https://' + url;
+        }
+        
+        console.log('Formatted URL:', formattedUrl);
+        
+        // Check if URL is supported
+        const supported = await Linking.canOpenURL(formattedUrl);
+        console.log('URL supported:', supported);
+        
+        if (supported) {
+          await Linking.openURL(formattedUrl);
+        } else {
+          Alert.alert('Error', `Cannot open this URL: ${formattedUrl}`);
+        }
+      } catch (error) {
+        console.log('Browser open error:', error);
+        Alert.alert('Error', `Could not open URL in browser: ${error.message}`);
+      }
+    };
+
+    const handleVideoSelection = (url) => {
+      if (useBrowser) {
+        handleOpenInBrowser(url);
+      } else {
+        setCurrentVideo(url);
+      }
+    };
+
   return (
     <SafeAreaView style={styles.container}>
 
@@ -140,9 +178,20 @@ export default function App() {
       <TouchableOpacity style={styles.addURLBtn} onPress={handleAddVideo}>
         <Text style={styles.addBtnText}>Add Video</Text>
       </TouchableOpacity>
+      
+      <TouchableOpacity 
+        style={[styles.toggleBtn, useBrowser && styles.toggleBtnActive]} 
+        onPress={() => setUseBrowser(!useBrowser)}
+      >
+        <Text style={[styles.toggleBtnText, useBrowser && styles.toggleBtnTextActive]}>
+          {useBrowser ? '🌐 External Browser' : '📺 Video Player Mode'}
+        </Text>
+      </TouchableOpacity>
     </View>
 
-    <VideoView style={styles.videoPlayer} player={player} allowsFullscreen allowsPictureInPicture />
+    {!useBrowser && (
+      <VideoView style={styles.videoPlayer} player={player} allowsFullscreen allowsPictureInPicture />
+    )}
       
     <View style={styles.listContainer}>
       <FlatList
@@ -150,7 +199,7 @@ export default function App() {
         renderItem={({ item, index }) => (
           <View style={styles.videoEntryContainer}>
             <View style={styles.videoInfoContainer}>
-              <Text style={styles.videoURLText} onPress={() => setCurrentVideo(item.url)}>
+              <Text style={styles.videoURLText} onPress={() => handleVideoSelection(item.url)}>
                 {item.url}
               </Text>
               <View style={styles.videoMetaContainer}>
@@ -194,6 +243,13 @@ export default function App() {
       >
         <View style={[styles.modalContainer, { top: modalPosition.y, left: modalPosition.x }]}>
           <View style={styles.modalContent}>
+            <TouchableOpacity style={styles.modalItem} 
+              onPress={() => {
+                handleOpenInBrowser(videos[selectedVideoIndex].url);
+                setModalVisible(false);
+              }} > 
+              <Text style={styles.modalText}>Open in Browser</Text>
+            </TouchableOpacity>
             <TouchableOpacity style={styles.modalItem} 
               onPress={handleDeleteVideo} > 
               <Text style={styles.modalText}>Delete</Text>
@@ -260,6 +316,26 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  toggleBtn: {
+    backgroundColor: '#f0f0f0',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ccc',
+  },
+  toggleBtnActive: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  toggleBtnText: {
+    color: '#333',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  toggleBtnTextActive: {
+    color: 'white',
   },
   videoPlayer: {
     height: 200,
