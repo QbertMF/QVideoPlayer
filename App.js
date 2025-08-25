@@ -1,9 +1,10 @@
-import { Text, SafeAreaView, StyleSheet, Button, View , TouchableOpacity, TextInput, Modal, FlatList, Alert, Dimensions, Linking, Keyboard} from 'react-native';
+import { Text, SafeAreaView, StyleSheet, Button, View , TouchableOpacity, TextInput, Modal, FlatList, Alert, Dimensions, Linking, Keyboard, AppState} from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as WebBrowser from 'expo-web-browser';
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useEvent } from 'expo';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import PasswordScreen from './components/pwScreen';
 
 export default function App() {
@@ -13,12 +14,94 @@ export default function App() {
   //const [currentVideo, setCurrentVideo] = useState("http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4");
   const [currentVideo, setCurrentVideo] = useState(null);
   const [newVideoURL, setNewVideoURL] = useState('');
-  const [newVideoRating, setNewVideoRating] = useState(0);
-  const [newVideoLabels, setNewVideoLabels] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [modalPosition, setModalPosition] = useState({ x: 0, y: 0 });
   const [selectedVideoIndex, setSelectedVideoIndex] = useState(null);
   const [useBrowser, setUseBrowser] = useState(true);
+
+  // Constant encryption key (same across app sessions)
+  const ENCRYPTION_KEY = 42857; // Fixed random number for encryption
+  const STORAGE_KEY = 'encrypted_videos';
+
+  // Simple encryption function using XOR with hex encoding
+  const encryptData = (data) => {
+    const jsonString = JSON.stringify(data);
+    let encrypted = '';
+    for (let i = 0; i < jsonString.length; i++) {
+      const charCode = jsonString.charCodeAt(i) ^ (ENCRYPTION_KEY % 256);
+      encrypted += charCode.toString(16).padStart(2, '0');
+    }
+    return encrypted;
+  };
+
+  // Simple decryption function using XOR with hex decoding
+  const decryptData = (encryptedData) => {
+    try {
+      let decrypted = '';
+      for (let i = 0; i < encryptedData.length; i += 2) {
+        const hexPair = encryptedData.substr(i, 2);
+        const charCode = parseInt(hexPair, 16) ^ (ENCRYPTION_KEY % 256);
+        decrypted += String.fromCharCode(charCode);
+      }
+      return JSON.parse(decrypted);
+    } catch (error) {
+      console.log('Decryption error:', error);
+      return [];
+    }
+  };
+
+  // Save encrypted videos to storage
+  const saveVideosToStorage = async (videosToSave) => {
+    try {
+      const encryptedData = encryptData(videosToSave);
+      await AsyncStorage.setItem(STORAGE_KEY, encryptedData);
+      console.log('Videos saved and encrypted successfully');
+    } catch (error) {
+      console.log('Error saving videos:', error);
+    }
+  };
+
+  // Load and decrypt videos from storage
+  const loadVideosFromStorage = async () => {
+    try {
+      const encryptedData = await AsyncStorage.getItem(STORAGE_KEY);
+      if (encryptedData) {
+        const decryptedVideos = decryptData(encryptedData);
+        setVideos(decryptedVideos);
+        console.log('Videos loaded and decrypted successfully');
+      }
+    } catch (error) {
+      console.log('Error loading videos:', error);
+    }
+  };
+
+  // Load videos when app starts
+  useEffect(() => {
+    loadVideosFromStorage();
+  }, []);
+
+  // Save videos whenever the videos state changes
+  useEffect(() => {
+    if (videos.length > 0) {
+      saveVideosToStorage(videos);
+    }
+  }, [videos]);
+
+  // Handle app state changes (background/foreground)
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState) => {
+      if (nextAppState === 'background' || nextAppState === 'inactive') {
+        // Save videos when app goes to background
+        saveVideosToStorage(videos);
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    
+    return () => {
+      subscription?.remove();
+    };
+  }, [videos]);
 
   // Get screen dimensions
   const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -67,24 +150,39 @@ export default function App() {
         const foundUrls = newVideoURL.match(urlPattern);
         
         if (foundUrls && foundUrls.length > 0) {
-          const newVideos = foundUrls.map(url => ({
-            url: url.trim(),
-            dateAdded: new Date().toLocaleDateString(),
-            rating: newVideoRating,
-            labels: newVideoLabels.split(',').map(label => label.trim()).filter(label => label)
-          }));
+          // Get existing URLs for duplicate checking
+          const existingUrls = videos.map(video => video.url);
           
-          setVideos([...videos, ...newVideos]);
-          setNewVideoURL('');
-          setNewVideoRating(0);
-          setNewVideoLabels('');
+          // Filter out duplicates
+          const uniqueNewUrls = foundUrls.filter(url => !existingUrls.includes(url.trim()));
           
-          // Dismiss the keyboard after adding videos
-          Keyboard.dismiss();
-          
-          // Show confirmation message
-          if (foundUrls.length > 1) {
-            Alert.alert('Success', `Added ${foundUrls.length} videos to the list`);
+          if (uniqueNewUrls.length > 0) {
+            const newVideos = uniqueNewUrls.map(url => ({
+              url: url.trim(),
+              dateAdded: new Date().toLocaleDateString(),
+              rating: 0,
+              labels: []
+            }));
+            
+            setVideos([...videos, ...newVideos]);
+            setNewVideoURL('');
+            
+            // Dismiss the keyboard after adding videos
+            Keyboard.dismiss();
+            
+            // Show confirmation message
+            const duplicateCount = foundUrls.length - uniqueNewUrls.length;
+            if (uniqueNewUrls.length > 1) {
+              let message = `Added ${uniqueNewUrls.length} videos to the list`;
+              if (duplicateCount > 0) {
+                message += `. ${duplicateCount} duplicate URL(s) were skipped.`;
+              }
+              Alert.alert('Success', message);
+            } else if (duplicateCount > 0) {
+              Alert.alert('Info', `${duplicateCount} duplicate URL(s) were skipped.`);
+            }
+          } else {
+            Alert.alert('Info', 'All URLs are already in the list. No new videos were added.');
           }
         } else {
           Alert.alert('Error', 'Please enter at least one valid URL starting with http:// or https://');
@@ -158,22 +256,9 @@ export default function App() {
               placeholder="Enter Video URL"
               value={newVideoURL}
               onChangeText={setNewVideoURL}
-            />
-            <TextInput
-              style={styles.addRatingTxt}
-              placeholder="Rating (0-5)"
-              value={newVideoRating.toString()}
-              onChangeText={(text) => {
-                const rating = parseInt(text) || 0;
-                setNewVideoRating(Math.min(Math.max(rating, 0), 5));
-              }}
-              keyboardType="numeric"
-            />
-            <TextInput
-              style={styles.addLabelsTxt}
-              placeholder="Labels (comma separated)"
-              value={newVideoLabels}
-              onChangeText={setNewVideoLabels}
+              multiline={true}
+              numberOfLines={3}
+              textAlignVertical="top"
             />
             <TouchableOpacity style={styles.addURLBtn} onPress={handleAddVideo}>
               <Text style={styles.addBtnText}>Add Video</Text>
@@ -286,22 +371,8 @@ export default function App() {
     marginBottom: 8,
     borderRadius: 5,
     fontSize: 14,
-  },
-  addRatingTxt: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 10,
-    marginBottom: 8,
-    borderRadius: 5,
-    fontSize: 14,
-  },
-  addLabelsTxt: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 10,
-    marginBottom: 8,
-    borderRadius: 5,
-    fontSize: 14,
+    height: 80,
+    maxHeight: 80,
   },
   addURLBtn: {
     backgroundColor: '#007AFF',
