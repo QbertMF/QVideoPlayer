@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import appConfig from '../app.json';
 
 const PasswordScreen = ({ onLogin }) => {
   const [password, setPassword] = useState('');
+  const appVersion = appConfig.expo.version;
 
   const handleLogin = () => {
     if (password === 'qv') {
@@ -17,6 +19,7 @@ const PasswordScreen = ({ onLogin }) => {
   return (
     <View style={styles.loginContainer}>
       <Text style={styles.loginTitle}>QVideoPlayer</Text>
+      <Text style={styles.versionText}>v{appVersion}</Text>
       <Text style={styles.loginSubtitle}>Enter password to continue</Text>
       
       <TextInput
@@ -45,10 +48,15 @@ const styles = StyleSheet.create({
     paddingTop: 100,
   },
   loginTitle: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#007AFF',
     marginBottom: 10,
+  },
+  versionText: {
+    fontSize: 14,
+    color: '#888',
+    marginBottom: 5,
   },
   loginSubtitle: {
     fontSize: 16,

@@ -1,8 +1,8 @@
 {
   "expo": {
     "name": "QVideoPlayer",
-    "slug": "QVideoPlayer",
-    "version": "1.0.0",
+    "slug": "qvideoplayer",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -33,8 +33,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "7127cf10-ffa1-4cef-aa04-475353714454"
+        "projectId": "9811676a-be1f-440c-8fd3-ffe584a93c68"
       }
-    }
+    },
+    "owner": "qbert_expo-org"
   }
 }

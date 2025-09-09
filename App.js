@@ -296,7 +296,7 @@ export default function App() {
           <View style={styles.addURL}>
             <TextInput
               style={styles.addURLTxt}
-              placeholder="Enter Video URL"
+              placeholder="Enter Video URL or whitespace separated list of URLs"
               value={newVideoURL}
               onChangeText={setNewVideoURL}
               multiline={true}
@@ -421,9 +421,8 @@ export default function App() {
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 40,
-    padding: 20,
-    backgroundColor: '#fff',
+    marginTop: 20, // Reduced from 40 to move widgets up
+    padding: 10,
     flex: 1,
   },
   addURL: {
@@ -436,7 +435,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     borderRadius: 5,
     fontSize: 14,
-    height: 80,
+    height: 70,
     maxHeight: 80,
   },
   addURLBtn: {
