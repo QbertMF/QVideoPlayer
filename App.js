@@ -1,27 +1,24 @@
 import { Text, SafeAreaView, StyleSheet, Button, View , TouchableOpacity, TextInput, Modal, FlatList, Alert, Dimensions, Linking, Keyboard, AppState} from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import * as WebBrowser from 'expo-web-browser';
 import React, { useState, useRef, useEffect } from 'react';
-import { useEvent } from 'expo';
-import { useVideoPlayer, VideoView } from 'expo-video';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import PasswordScreen from './components/pwScreen';
 import RatingModal from './components/ratingModal';
+import { WebView } from 'react-native-webview';
 
 export default function App() {
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [videos, setVideos] = useState([]);
-  //const [currentVideo, setCurrentVideo] = useState("http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4");
   const [currentVideo, setCurrentVideo] = useState(null);
   const [newVideoURL, setNewVideoURL] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [modalPosition, setModalPosition] = useState({ x: 0, y: 0 });
   const [selectedVideoIndex, setSelectedVideoIndex] = useState(null);
-  const [useBrowser, setUseBrowser] = useState(true);
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
   const [ratingToEdit, setRatingToEdit] = useState(null);
   const [newRating, setNewRating] = useState('');
+  const [webViewVisible, setWebViewVisible] = useState(false);
+  const [webViewUrl, setWebViewUrl] = useState(null);
 
   // Constant encryption key (same across app sessions)
   const ENCRYPTION_KEY = 42857; // Fixed random number for encryption
@@ -140,13 +137,6 @@ export default function App() {
     return { x, y };
   };
 
-    const player = useVideoPlayer(currentVideo, player => {
-      player.loop = true;
-      player.play();
-    });
-
-    const { isPlaying } = useEvent(player, 'playingChange', { isPlaying: player.playing });
-
     const handleAddVideo = () => {
       if (newVideoURL.trim()) {
         // Split the input by spaces and filter for URLs starting with http
@@ -210,40 +200,13 @@ export default function App() {
       Alert.alert('Copied', 'URL copied to clipboard');
     };
 
-    const handleOpenInBrowser = async (url) => {
-      try {
-        // Debug: Log the URL being opened
-        console.log('Opening URL:', url);
-        
-        // Ensure URL has proper protocol
-        let formattedUrl = url;
-        if (!url.startsWith('http://') && !url.startsWith('https://')) {
-          formattedUrl = 'https://' + url;
-        }
-        
-        console.log('Formatted URL:', formattedUrl);
-        
-        // Check if URL is supported
-        const supported = await Linking.canOpenURL(formattedUrl);
-        console.log('URL supported:', supported);
-        
-        if (supported) {
-          await Linking.openURL(formattedUrl);
-        } else {
-          Alert.alert('Error', `Cannot open this URL: ${formattedUrl}`);
-        }
-      } catch (error) {
-        console.log('Browser open error:', error);
-        Alert.alert('Error', `Could not open URL in browser: ${error.message}`);
-      }
+    const handleOpenInBrowser = (url) => {
+      setWebViewUrl(url);
+      setWebViewVisible(true);
     };
 
     const handleVideoSelection = (url) => {
-      if (useBrowser) {
-        handleOpenInBrowser(url);
-      } else {
-        setCurrentVideo(url);
-      }
+      handleOpenInBrowser(url);
     };
 
     const handleExportVideos = async () => {
@@ -304,16 +267,7 @@ export default function App() {
               textAlignVertical="top"
             />
             <TouchableOpacity style={styles.addURLBtn} onPress={handleAddVideo}>
-              <Text style={styles.addBtnText}>Add Video</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.toggleBtn, useBrowser && styles.toggleBtnActive]} 
-              onPress={() => setUseBrowser(!useBrowser)}
-            >
-              <Text style={[styles.toggleBtnText, useBrowser && styles.toggleBtnTextActive]}>
-                {useBrowser ? '🌐 External Browser' : '📺 Video Player Mode'}
-              </Text>
+              <Text style={styles.addBtnText}>Add Video(s)</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
@@ -326,10 +280,6 @@ export default function App() {
             </TouchableOpacity>
           </View>
 
-          {!useBrowser && (
-            <VideoView style={styles.videoPlayer} player={player} allowsFullscreen allowsPictureInPicture />
-          )}
-            
           <View style={styles.listContainer}>
       <FlatList
         data={videos}
@@ -413,6 +363,29 @@ export default function App() {
         onRatingChange={setNewRating}
         onSubmit={submitRatingUpdate}
       />
+
+      {/* WebView Modal */}
+      <Modal
+        visible={webViewVisible}
+        animationType="slide"
+        onRequestClose={() => setWebViewVisible(false)}
+      >
+        <View style={{ flex: 1 }}>
+          <View style={{ height: 50, backgroundColor: '#007AFF', justifyContent: 'center', alignItems: 'flex-end', paddingHorizontal: 10 }}>
+            <TouchableOpacity onPress={() => setWebViewVisible(false)}>
+              <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>Close</Text>
+            </TouchableOpacity>
+          </View>
+          <WebView
+            source={{ uri: webViewUrl }}
+            style={{ flex: 1 }}
+            incognito={true}
+            cacheEnabled={false}
+            javaScriptEnabled={true}
+            domStorageEnabled={false}
+          />
+        </View>
+      </Modal>
         </>
       )}
     </SafeAreaView>
@@ -450,26 +423,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  toggleBtn: {
-    backgroundColor: '#f0f0f0',
-    padding: 10,
-    borderRadius: 5,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ccc',
-  },
-  toggleBtnActive: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
-  },
-  toggleBtnText: {
-    color: '#333',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  toggleBtnTextActive: {
-    color: 'white',
-  },
   exportBtn: {
     backgroundColor: '#28a745',
     padding: 10,
@@ -483,12 +436,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 14,
     fontWeight: '500',
-  },
-  videoPlayer: {
-    height: 200,
-    width: '100%',
-    marginBottom: 15,
-    backgroundColor: '#000',
   },
   listContainer: {
     flex: 1,
