@@ -24,6 +24,10 @@ export default function App() {
   const ENCRYPTION_KEY = 42857; // Fixed random number for encryption
   const STORAGE_KEY = 'encrypted_videos';
 
+  // Dropbox API configuration
+  const DROPBOX_ACCESS_TOKEN = 'sl.u.AF_Rd_n6ikWr2zXqXXjNfqVe4M02rWFNIiCHIUC3D_7GC92yOVej7CHPMEptaceMW0nTYDuiEDYjJygtvNJPzL7lNuVxAR1t3hA88nIecAtib-Oxp7UaMZA-TCFmGfMgakBVdHchMUbhdZSzdDwuvy-SRmya-B1SEANkUGvF2oKAzl8Ynt0qwtxpOVxC-T14xOnqENiJ5eUUk8AUIv53ZkWe9xb_iztU2pL-Fa1EcgLEaqVQCPZou0Fk9NoDHDBekPVEKuXctNlQDQ2Fcq-2BVExHdT2jGhBj80Oh9DpscfSgV8lfZNPZ_EcB_v5xBePtc_poxTOxhLJ9Pdfp-KOhbY50RqryDcbSJLMKtxtJyzkH8f_nOX8AURJpdTNoVI7Qi51lUhs72dhwClk-ewjo8HwyYENSfWAPaIQer2kx8deKLY56T2U72pu_pLyBODwq724yzdlQO8sNm4BYqSxzqh-yOEBuAmwyJNfVAF0yOcMoFEINjBeasQki0WnoRslISpBqWsSsdVGLCBeUt5s7KJKSClu_WhZiN2xUzAkKmrwcjT8XTrg4W7tCVIZeXD1mNXUgZRkr3mYuD86m5VZSAqvlDFxAUmCavuL49lmT5kjfbgt0Jlk2qbfOcGOdiIerAH_1UtNKBIle3BJKMkpaNP6ZgOoMrlLVReNMSqRJ4GBYlK2Bh2Nz-6xh9jDS8p1GI8A5owtFw8V2grrhruhZj9v5Im1tQ2Mm196LZfY1dxEBeiXXau7eNwJb5GtMPPAMQx77Q1qyr4vHr7pMj9p4Gqaf4-83-d80hX81vsiSptAlLHQhbOkc5NbWqIMETxmpACTGiZTcHYDDE8-8q5HsyvXYrD5yhHnQPZerezkO5PVUAfeAXF2d4Faa2uVwCQ1WhxHxSFX5LcjgvcXLeM1o38a1Ac3jcKYQTw2bSeBY6LuQBaU6FrJ9i8qjq1ws9RULmeKEZLbAWz93zYk30fJg_26jvFsu-DhXCuCrfAjVDS2Hxkxu06tUpucGlBcDMC9hEwoNZ3LYXPWodeWeJ0vlGxEZmNDULwub25P_mL0pv_LN8yrqG3ib6-WyVvDRd1S_ysBdc74kVZFBvSQzk5w1OT_UXIDGmEtgvGfv_D5P7Sp8U92x9zsgOYgCWdJS1_4pglJHrM1GPbD1bH6uYUuJM2BMbB-SqnE9KqZpX47dVCVj5-gDEqUwU5h5eLVuDZMq3CCOrnQgsBUnQiRbxRbnJavtOAnUkbGXX1LPEDT4WoZjz7cIYP94mefRrNWxPKg4_BdriK0_uOLun1Lg5JEcw-N'; // Replace with your Dropbox token
+  const DROPBOX_UPLOAD_PATH = '/encrypted_videos.txt'; // Path in Dropbox
+
   // Simple encryption function using XOR with hex encoding
   const encryptData = (data) => {
     const jsonString = JSON.stringify(data);
@@ -248,6 +252,34 @@ export default function App() {
       setNewRating('');
     };
 
+    const uploadToDropbox = async () => {
+      try {
+        const encryptedData = encryptData(videos);
+        const response = await fetch('https://content.dropboxapi.com/2/files/upload', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${DROPBOX_ACCESS_TOKEN}`,
+            'Dropbox-API-Arg': JSON.stringify({
+              path: DROPBOX_UPLOAD_PATH,
+              mode: 'overwrite',
+              autorename: false,
+              mute: false,
+            }),
+            'Content-Type': 'application/octet-stream',
+          },
+          body: encryptedData,
+        });
+        if (response.ok) {
+          Alert.alert('Success', 'Encrypted videos uploaded to Dropbox');
+        } else {
+          const errorText = await response.text();
+          Alert.alert('Error', `Dropbox upload failed: ${errorText}`);
+        }
+      } catch (error) {
+        Alert.alert('Error', `Dropbox upload error: ${error.message}`);
+      }
+    };
+
   return (
     <SafeAreaView style={styles.container}>
       {!isLoggedIn ? (
@@ -276,6 +308,14 @@ export default function App() {
             >
               <Text style={styles.exportBtnText}>
                 📋 Export URLs ({videos.length})
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.exportBtn, { backgroundColor: '#0066cc', borderColor: '#0066cc', marginTop: 5 }]} 
+              onPress={uploadToDropbox}
+            >
+              <Text style={styles.exportBtnText}>
+                🔒 Export Encrypted to Dropbox
               </Text>
             </TouchableOpacity>
           </View>
@@ -330,7 +370,7 @@ export default function App() {
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={[styles.modalContainer, { top: modalPosition.y, left: modalPosition.x }]}>
+        <View style={[styles.modalContainer, { top: modalPosition.y, left: modalPosition.x }]}> 
           <View style={styles.modalContent}>
             <TouchableOpacity style={styles.modalItem} 
               onPress={() => {
@@ -386,9 +426,9 @@ export default function App() {
           />
         </View>
       </Modal>
-        </>
-      )}
-    </SafeAreaView>
+    </>
+    )}
+  </SafeAreaView>
   );
 }
 
@@ -397,11 +437,14 @@ const styles = StyleSheet.create({
     marginTop: 20, // Reduced from 40 to move widgets up
     padding: 10,
     flex: 1,
+    backgroundColor: '#f7f7f7',
   },
   addURL: {
     marginBottom: 15,
   },
   addURLTxt: {
+    height: 40,
+    borderColor: '#007AFF',
     borderWidth: 1,
     borderColor: '#ccc',
     padding: 10,
@@ -427,6 +470,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#28a745',
     padding: 10,
     borderRadius: 5,
+    borderWidth: 1,
+    borderColor: '#007AFF',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#28a745',
@@ -439,6 +484,7 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     flex: 1,
+    padding: 10,
   },
   videoEntryContainer: {
     flexDirection: 'row',
@@ -447,6 +493,15 @@ const styles = StyleSheet.create({
     borderColor: '#eee',
     borderRadius: 5,
     padding: 10,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
   },
   videoInfoContainer: {
     flex: 1,
