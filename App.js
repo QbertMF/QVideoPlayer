@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import PasswordScreen from './components/pwScreen';
 import RatingModal from './components/ratingModal';
 import { WebView } from 'react-native-webview';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function App() {
 
